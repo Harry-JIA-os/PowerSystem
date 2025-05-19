@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美國電力市場組織圖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" xintegrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+            display: flex;
+            flex-direction: column; /* Allow button to be above chart */
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem; /* Tailwind p-8 */
+            overflow-y: auto; /* Enable vertical scroll if needed */
+        }
+        .controls {
+            margin-bottom: 1.5rem; /* Tailwind mb-6 */
+            text-align: center;
+        }
+        .download-btn {
+            background-color: #3b82f6; /* Tailwind bg-blue-500 */
+            color: white;
+            font-weight: 500; /* Tailwind font-medium */
+            padding: 0.75rem 1.5rem; /* Tailwind py-3 px-6 */
+            border-radius: 0.5rem; /* Tailwind rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tailwind shadow-md */
+            transition: background-color 0.3s ease;
+        }
+        .download-btn:hover {
+            background-color: #2563eb; /* Tailwind bg-blue-600 */
+        }
+        .org-chart-container { /* Added a container for html2canvas to capture */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Tailwind gap-6 */
+            width: 100%;
+            max-width: 800px; /* Max width for the chart */
+            background-color: #f3f4f6; /* Match body background for cleaner capture */
+            padding: 1rem; /* Add some padding so border of chart is not cut off */
+        }
+        .org-chart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Tailwind gap-6 */
+            width: 100%;
+        }
+        .org-chart ul {
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem; /* Tailwind gap-6 */
+        }
+        .org-chart li {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+        .org-chart .node {
+            background-color: #ffffff; /* Tailwind bg-white */
+            border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+            border-radius: 0.5rem; /* Tailwind rounded-lg */
+            padding: 1rem 1.5rem; /* Tailwind p-4 px-6 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tailwind shadow-md */
+            min-width: 280px; /* Minimum width for nodes */
+            font-weight: 500; /* Tailwind font-medium */
+            color: #1f2937; /* Tailwind text-gray-800 */
+        }
+        .org-chart .node-title {
+            font-weight: 600; /* Tailwind font-semibold */
+            color: #111827; /* Tailwind text-gray-900 */
+        }
+        .org-chart .node-subtitle {
+            font-size: 0.875rem; /* Tailwind text-sm */
+            color: #6b7280; /* Tailwind text-gray-500 */
+        }
+
+        /* Lines */
+        .org-chart li::before, .org-chart li::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            background-color: #d1d5db; /* Tailwind bg-gray-300 */
+        }
+        /* Vertical line connecting to parent */
+        .org-chart li:not(:first-child)::before {
+            width: 2px;
+            height: 1.5rem; /* Tailwind h-6, same as gap */
+            top: -1.5rem; /* Negative of gap */
+            transform: translateX(-50%);
+        }
+
+        .org-chart ul ul {
+            margin-top: 1.5rem; /* Tailwind mt-6 */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) { /* Tailwind sm breakpoint */
+            .org-chart .node {
+                min-width: 200px;
+                padding: 0.75rem 1rem; /* Tailwind p-3 px-4 */
+            }
+            .org-chart .node-title {
+                font-size: 0.875rem; /* Tailwind text-sm */
+            }
+            .org-chart .node-subtitle {
+                font-size: 0.75rem; /* Tailwind text-xs */
+            }
+            .download-btn {
+                padding: 0.5rem 1rem; /* Tailwind py-2 px-4 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="downloadChartBtn" class="download-btn">下載組織圖 (PNG)</button>
+    </div>
+
+    <div id="orgChartToCapture" class="org-chart-container">
+        <h1 class="text-2xl font-bold text-gray-700 mb-8 text-center">美國電力市場運營管理組織圖</h1>
+        <div class="org-chart">
+            <ul>
+                <li>
+                    <div class="node">
+                        <div class="node-title">聯邦能源管理委員會</div>
+                        <div class="node-subtitle">(Federal Energy Regulatory Commission, FERC)</div>
+                    </div>
+                    <ul>
+                        <li>
+                            <div class="node">
+                                <div class="node-title">北美電力可靠性委員會</div>
+                                <div class="node-subtitle">(North America Electric Reliablity Corporation, NERC)</div>
+                            </div>
+                            <ul>
+                                <li>
+                                    <div class="node">
+                                        <div class="node-title">地區電力協調委員會</div>
+                                        <div class="node-subtitle">(Area Power Coordinating Council)</div>
+                                    </div>
+                                    <ul>
+                                        <li>
+                                            <div class="node">
+                                                <div class="node-title">州可靠性委員會</div>
+                                                <div class="node-subtitle">(State Electric Reliablity Council)</div>
+                                            </div>
+                                            <ul>
+                                                <li>
+                                                    <div class="node">
+                                                        <div class="node-title">州獨立系統調度員</div>
+                                                        <div class="node-subtitle">(State Independent System Operator)</div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 取得下載按鈕元素
+        const downloadButton = document.getElementById('downloadChartBtn');
+        // 取得要擷取的組織圖容器元素
+        const chartToCapture = document.getElementById('orgChartToCapture');
+
+        // 為下載按鈕加上點擊事件監聽器
+        downloadButton.addEventListener('click', () => {
+            // 使用 html2canvas 擷取指定的元素
+            // scale 選項可以提高圖片品質，useCORS 允許擷取跨域圖片 (雖然此處沒有)
+            html2canvas(chartToCapture, { scale: 2, useCORS: true, backgroundColor: '#f3f4f6' }).then(canvas => {
+                // 建立一個 <a> 元素來觸發下載
+                const link = document.createElement('a');
+                // 將 canvas 轉換為 PNG 格式的 data URL
+                link.href = canvas.toDataURL('image/png');
+                // 設定下載檔案的名稱
+                link.download = '美國電力市場組織圖.png';
+                // 將 <a> 元素加入到 DOM 中 (某些瀏覽器需要)
+                document.body.appendChild(link);
+                // 模擬點擊 <a> 元素以觸發下載
+                link.click();
+                // 從 DOM 中移除 <a> 元素
+                document.body.removeChild(link);
+            }).catch(error => {
+                // 如果擷取過程中發生錯誤，在控制台顯示錯誤訊息
+                console.error('無法擷取組織圖:', error);
+                alert('抱歉，無法產生圖片，請稍後再試。');
+            });
+        });
+    </style>
+</body>
+</html>
