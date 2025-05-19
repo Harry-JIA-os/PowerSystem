@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電力系統研習報告 - 互動資訊圖表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" xintegrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoVXM5TH5mbGLYZHbsCGqYOclectureg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" xintegrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4FSoLCVMxFDDZAWKaVrsG+Ph7WEFEbi1A3idflVRdBBrhAFi1cSii1LSSw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            color: #1e3a8a; /* Dark blue text */
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #1e3a8a; /* Dark blue */
+            color: white;
+            border-radius: 8px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .header p {
+            font-size: 1.1rem;
+            color: #a0aec0; /* Lighter text for subtitle */
+        }
+        .section {
+            background-color: #ffffff;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2563eb; /* Medium blue */
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dbeafe; /* Light blue border */
+        }
+        .stat-card {
+            background-color: #e0f2fe; /* Lightest blue */
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1d4ed8; /* Strong blue */
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #3b82f6; /* Medium blue */
+        }
+        .comparison-table th, .comparison-table td {
+            border: 1px solid #bfdbfe; /* Lighter blue border */
+            padding: 10px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background-color: #eff6ff; /* Very light blue */
+            color: #1e40af; /* Darker blue for header */
+        }
+        .process-step {
+            background-color: #eff6ff;
+            border-left: 5px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+            cursor: default;
+            position: relative;
+        }
+        .process-step .details {
+            display: none; /* Initially hidden */
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e0f2fe;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #1e40af;
+        }
+        .process-step:hover .details { /* Show on hover */
+            display: block;
+        }
+        .process-step .step-number {
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #3b82f6;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .test-item {
+            background-color: #e0f2fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #93c5fd;
+        }
+        .test-item h4 {
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+        .test-item p {
+            font-size: 0.9rem;
+            color: #1e40af;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: #1e3a8a;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            pointer-events: none; /* Important for hover */
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #6b7280; /* Gray text */
+        }
+        .download-button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        #downloadPdfButton {
+            background-color: #2563eb; /* Medium blue */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #downloadPdfButton:hover {
+            background-color: #1d4ed8; /* Stronger blue */
+        }
+
+        /* Styles for PDF export preparation */
+        body.print-mode .process-step .details {
+            display: block !important; /* Make details visible for PDF */
+        }
+        body.print-mode .stat-card:hover { /* Disable hover effects for PDF */
+            transform: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Reset shadow to base */
+        }
+        body.print-mode .tooltip {
+            display: none !important; /* Hide tooltips in PDF */
+        }
+        body.print-mode #downloadPdfButton, body.print-mode .download-button-container {
+            display: none !important; /* Hide download button in PDF */
+        }
+        body.print-mode .section { /* Remove box shadow for cleaner PDF */
+            box-shadow: none;
+            border: 1px solid #dbeafe; /* Add a light border for sections in PDF */
+        }
+         body.print-mode .header {
+            box-shadow: none;
+            border-bottom: 2px solid #a0aec0;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container" id="infographicContainer">
+        <header class="header">
+            <h1>電力系統研習報告</h1>
+            <p>美國德州大學阿靈頓分校能源系統研究中心 (ESRC) 研習重點互動摘要</p>
+        </header>
+
+        <div class="download-button-container">
+            <button id="downloadPdfButton">下載為 PDF (Download as PDF)</button>
+        </div>
+
+        <section class="section">
+            <h2 class="section-title">德州電力可靠性委員會 (ERCOT) 概覽 (截至報告年份約2008-2009)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="stat-card" data-tooltip="ERCOT 當時擁有約 566 台發電機組">
+                    <div class="stat-value">約 80,076 MW</div>
+                    <div class="stat-label">總裝置容量</div>
+                </div>
+                <div class="stat-card" data-tooltip="2006年8月創下紀錄">
+                    <div class="stat-value">62,339 MW</div>
+                    <div class="stat-label">尖峰負載紀錄</div>
+                </div>
+                <div class="stat-card" data-tooltip="相當於德州85%的電力負載">
+                    <div class="stat-value">約 2,200 萬</div>
+                    <div class="stat-label">服務用戶數</div>
+                </div>
+                <div class="stat-card md:col-span-1" data-tooltip="ERCOT 負責調度管理">
+                    <div class="stat-value">40,327 英里</div>
+                    <div class="stat-label">高壓輸電線路</div>
+                </div>
+                 <div class="stat-card md:col-span-1" data-tooltip="當時為全美之最">
+                    <div class="stat-value">8,000 MW</div>
+                    <div class="stat-label">風力發電裝置容量</div>
+                </div>
+                 <div class="stat-card md:col-span-1" data-tooltip="最低要求 12.5%">
+                    <div class="stat-value">16.8%</div>
+                    <div class="stat-label">備用容量率</div>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-3 text-blue-700">ERCOT 與台電 (TPC) 系統概況比較 (報告數據)</h3>
+            <div class="overflow-x-auto">
+                <table class="comparison-table w-full">
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>ERCOT</th>
+                            <th>TPC (台電)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>服務用戶數</td>
+                            <td>約 2,200 萬</td>
+                            <td>約 1,200 萬</td>
+                        </tr>
+                        <tr>
+                            <td>總裝置容量</td>
+                            <td>80,076 MW</td>
+                            <td>38,634 MW</td>
+                        </tr>
+                        <tr>
+                            <td>尖峰負載紀錄</td>
+                            <td>62,339 MW (2006/8)</td>
+                            <td>32,790.8 MW (2007/7)</td>
+                        </tr>
+                        <tr>
+                            <td>高壓輸電線路</td>
+                            <td>40,327 英里</td>
+                            <td>10,036 英里 (約16,151公里)</td>
+                        </tr>
+                        <tr>
+                            <td>風力發電裝置容量</td>
+                            <td>8,000 MW</td>
+                            <td>346.86 MW</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">ERCOT 發電能源結構 (2009年裝置容量佔比)</h2>
+            <div class="w-full md:w-2/3 lg:w-1/2 mx-auto">
+                <canvas id="energyMixChart"></canvas>
+            </div>
+            <p class="text-sm text-center mt-4 text-gray-600">資料來源：報告圖 5.2。將滑鼠懸停在圖表區塊上查看詳細百分比。</p>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">全黑啟動 (Black Start) 挑戰與流程</h2>
+            <p class="mb-4 text-gray-700">電力系統發生全停電事故後，如何在最短時間內迅速恢復供電至關重要。「全黑啟動」是指在無外部電源支援下，啟動發電機組並逐步恢復電網的過程。以下為 ERCOT 全黑啟動執行準則的關鍵步驟：</p>
+            <div id="blackStartProcess">
+                </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">全黑啟動機組的資格驗證</h2>
+            <p class="mb-4 text-gray-700">為確保全黑啟動的可靠性，ERCOT 對參與的發電機組有嚴格的測試要求 (資料參考報告第6.3節)：</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="test-item">
+                    <h4>1. 基本啟動測試 (Basic Starting Test)</h4>
+                    <p><strong>頻率：</strong>每年一次。<br><strong>目標：</strong>驗證機組不依靠外電自行啟動，或依靠特定備用電源啟動，並在無載或廠內輔助負載下穩定運轉至少30分鐘。</p>
+                </div>
+                <div class="test-item">
+                    <h4>2. 加壓線路測試 (Line-Energizing Test)</h4>
+                    <p><strong>頻率：</strong>至少每3年一次。<br><strong>目標：</strong>驗證機組能對指定的輸電線路加壓，並在無載或廠內負載下穩定電壓和頻率至少30分鐘。</p>
+                </div>
+                <div class="test-item">
+                    <h4>3. 取載測試 (Load-Carrying Test)</h4>
+                    <p><strong>頻率：</strong>至少每5年一次。<br><strong>目標：</strong>驗證機組能穩定供電給ERCOT預先規劃的負載，並在取載後維持電壓和頻率穩定達30分鐘。</p>
+                </div>
+                <div class="test-item">
+                    <h4>4. 啟動下一部機組能力測試 (Next Start Resource Test)</h4>
+                    <p><strong>頻率：</strong>當新的全黑啟動機組被選出時，或根據需要。<br><strong>目標：</strong>驗證機組有能力提供電力啟動ERCOT指定的下一部機組，或其所需的最大馬達負載。</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>此互動資訊圖表內容根據「參加美國德州大學阿靈頓分校能源系統研究中心電力系統研習班」報告 (林昭琦，台灣電力公司，98年8月24日) 製作。所有數據和流程均源自該報告。僅供教學與示意用途。</p>
+        </footer>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ensure jsPDF is available from the global scope
+            const { jsPDF } = window.jspdf;
+
+            // Tooltip functionality
+            const tooltipElement = document.getElementById('tooltip');
+            const statCards = document.querySelectorAll('.stat-card');
+
+            statCards.forEach(card => {
+                card.addEventListener('mousemove', function(e) {
+                    if (document.body.classList.contains('print-mode')) return; // Don't show tooltip in print-mode
+                    const tooltipText = card.getAttribute('data-tooltip');
+                    if (tooltipText) {
+                        tooltipElement.style.display = 'block';
+                        tooltipElement.textContent = tooltipText;
+                        tooltipElement.style.left = (e.pageX + 15) + 'px';
+                        tooltipElement.style.top = (e.pageY + 15) + 'px';
+                    }
+                });
+                card.addEventListener('mouseleave', function() {
+                    tooltipElement.style.display = 'none';
+                });
+            });
+
+            // Energy Mix Chart
+            const ctxMix = document.getElementById('energyMixChart')?.getContext('2d');
+            if (ctxMix) {
+                // Store chart instance to destroy and recreate if needed, or to get base64 image
+                window.energyMixChartInstance = new Chart(ctxMix, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['天然氣 (Natural Gas)', '燃煤 (Coal)', '核能 (Nuclear)', '風力 (Wind)', '水力/太陽能/生質能等 (Other)'],
+                        datasets: [{
+                            label: '發電能源結構 (%)',
+                            data: [65, 16, 6, 10, 3], // From Figure 5.2
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.8)', // Blue
+                                'rgba(75, 75, 75, 0.8)',    // Dark Gray (for Coal)
+                                'rgba(255, 206, 86, 0.8)', // Yellow (for Nuclear)
+                                'rgba(75, 192, 192, 0.8)', // Teal (for Wind)
+                                'rgba(153, 102, 255, 0.8)' // Purple (for Other)
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(75, 75, 75, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true, // Adjust as needed
+                        animation: { // Disable animation for PDF capture if it causes issues
+                            duration: 0 
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#1e3a8a'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) { label += ': '; }
+                                        if (context.parsed !== null) { label += context.parsed + '%'; }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Black Start Process Steps
+            const blackStartProcessContainer = document.getElementById('blackStartProcess');
+            if (blackStartProcessContainer) {
+                const processStepsData = [
+                    { id: 1, title: "決定系統狀況", details: "評估停電的區域範圍、未停電區域的可用的發電備轉容量、可用的發電廠及重新起動所需的時間、重要幹線與設備狀態等。" },
+                    { id: 2, title: "確認通訊狀態", details: "驗證或建立與輸電業者、發電業者的通訊路徑。可靠的通訊是系統崩潰後即時復電的重要關鍵。" },
+                    { id: 3, title: "系統復電準備", details: "通常需要先把停電範圍作區域性劃分，目標包括優先供應核電廠外援電力、確保復電區塊負載可將冷取載問題最小化。" },
+                    { id: 4, title: "有關發電廠的問題", details: "首先供給電力防止發電廠設備損壞及提供核電廠外援電力，接著供給起動準備中的機組。大型發電機併聯後需提供最小發電需求的負載。" },
+                    { id: 5, title: "選擇線路 (加壓線路)", details: "優先建立鄰近區域發電廠的聯絡線。小心操作高壓輸電系統，因充電電流可能產生高電壓。注意鐵共振現象。" },
+                    { id: 6, title: "取載", details: "逐步恢復負載，輸電線調度員需與電廠密切聯繫。一般而言，獨立運轉時每次取載量應低於總發電容量的5%。注意冷負載取載的衝擊電流。" },
+                    { id: 7, title: "獨立系統間的同步", details: "輸電線路調度員派員確保合聯點斷路器狀態。頻率差異過大時，需聯絡調整發電機頻率以達同步。相角差盡量減小到10°以下。" }
+                ];
+
+                processStepsData.forEach(step => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'process-step relative pl-8 pr-4 py-4 mb-3';
+                    const stepNumberSpan = document.createElement('span');
+                    stepNumberSpan.className = 'step-number';
+                    stepNumberSpan.textContent = step.id;
+                    const titleH4 = document.createElement('h4');
+                    titleH4.className = 'text-lg font-semibold text-blue-600';
+                    titleH4.textContent = `${step.title}`;
+                    const detailsP = document.createElement('p');
+                    detailsP.className = 'details';
+                    detailsP.textContent = step.details;
+                    stepDiv.appendChild(stepNumberSpan);
+                    stepDiv.appendChild(titleH4);
+                    stepDiv.appendChild(detailsP);
+                    blackStartProcessContainer.appendChild(stepDiv);
+                });
+            }
+
+            // PDF Download Functionality
+            const downloadButton = document.getElementById('downloadPdfButton');
+            if (downloadButton) {
+                downloadButton.addEventListener('click', function() {
+                    const infographicContainer = document.getElementById('infographicContainer');
+                    if (!infographicContainer) {
+                        console.error("Infographic container not found!");
+                        return;
+                    }
+                    
+                    // Add a class to the body to apply print-specific styles
+                    document.body.classList.add('print-mode');
+                    
+                    // Ensure charts are rendered without animation for consistent capture
+                    if (window.energyMixChartInstance) {
+                        window.energyMixChartInstance.options.animation.duration = 0;
+                        window.energyMixChartInstance.update();
+                    }
+
+                    html2canvas(infographicContainer, {
+                        scale: 2, // Increase scale for better resolution
+                        useCORS: true, // If you had external images
+                        backgroundColor: '#ffffff', // Ensure canvas background is white for PDF
+                        onclone: (documentClone) => {
+                            // This function is called when html2canvas clones the document
+                            // You can make further DOM manipulations on the clone if needed
+                            // For example, ensure all details are visible on the cloned document
+                            documentClone.body.classList.add('print-mode');
+                            const detailsElements = documentClone.querySelectorAll('.process-step .details');
+                            detailsElements.forEach(el => el.style.display = 'block');
+                        }
+                    }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, mm, A4 size
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const imgWidth = imgProps.width;
+                        const imgHeight = imgProps.height;
+
+                        // Calculate the aspect ratio
+                        const ratio = imgWidth / imgHeight;
+                        let newImgWidth = pdfWidth;
+                        let newImgHeight = newImgWidth / ratio;
+
+                        // If the image is too tall for one page, split it
+                        let heightLeft = newImgHeight;
+                        let position = 0; // Y position for the image on the PDF page
+
+                        // Check if image height is less than pdf height, if so, center it or scale down
+                        if (newImgHeight <= pdfHeight) {
+                            newImgHeight = Math.min(newImgHeight, pdfHeight - 20); // 10mm margin top and bottom
+                            newImgWidth = newImgHeight * ratio;
+                             const xOffset = (pdfWidth - newImgWidth) / 2;
+                            pdf.addImage(imgData, 'PNG', xOffset, 10, newImgWidth, newImgHeight);
+                        } else { // Image is taller than one page, needs splitting
+                            newImgHeight = pdfHeight; // Set to full page height for first page
+                            newImgWidth = newImgHeight * ratio;
+
+                            // Initial addImage call for the first page
+                            pdf.addImage(imgData, 'PNG', 0, position, newImgWidth, newImgHeight);
+                            heightLeft -= newImgHeight;
+
+                            // Add new pages if image is still taller
+                            while (heightLeft > 0) {
+                                position -= newImgHeight; // Effectively, this is the Y offset in the source image
+                                pdf.addPage();
+                                pdf.addImage(imgData, 'PNG', 0, position, newImgWidth, newImgHeight);
+                                heightLeft -= newImgHeight;
+                            }
+                        }
+                        
+                        pdf.save('電力系統研習報告_互動摘要.pdf');
+                        
+                        // Remove the print-mode class after PDF generation
+                        document.body.classList.remove('print-mode');
+                        // Restore chart animation if needed
+                        if (window.energyMixChartInstance) {
+                           // window.energyMixChartInstance.options.animation.duration = 1000; // Or original value
+                           // window.energyMixChartInstance.update();
+                        }
+                    }).catch(err => {
+                        console.error("Error generating PDF:", err);
+                        document.body.classList.remove('print-mode'); // Ensure cleanup on error
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
